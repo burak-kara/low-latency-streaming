@@ -1,0 +1,7 @@
+segment_duration=4
+source_path="rtmp://192.168.1.107:1935/live"
+output_path="D:/projects/CS518/LowLatency/segments/manifest.mpd"
+segments_path="D:/projects/CS518/LowLatency/"
+live_path="http://192.168.1.107:8000/segments/manifest.mpd"
+
+
