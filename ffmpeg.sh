@@ -1,0 +1,1 @@
+ffmpeg -f flv -listen 1 -i rtmp://192.168.1.107:1935/live/app -an -c:v copy -b:v 500k -ldash 1 -streaming 1 -use_template 1 -use_timeline 0 -seg_duration 4 -remove_at_exit 1 -f dash D:/projects/CS518/LowLatency/segments/manifest.mpd
