@@ -1,10 +1,9 @@
-/* 
- * Copyright (c) 2012-2013. Telecom ParisTech/TSI/MM/GPAC 
+/*
+ * Copyright (c) 2012-2013. Telecom ParisTech/TSI/MM/GPAC
  * License: AGPL-3-Clause (see LICENSE file)
  *
  * NodeJS code to serve media content using DASH in low latency mode
  ******************************************************************************/
-
 
 function usage() {
     console.log("node dash-chunked.js [options]");
@@ -24,36 +23,35 @@ function usage() {
     console.log();
 }
 
-const fs = require('fs');
-const http = require('http');
-const url_parser = require('url');
-const segments_path = require('./config');
+var fs = require('fs');
+var http = require('http');
+var url_parser = require('url');
 
-let ipaddr = null;
-let port = 8000;
-let quality_log_file = null;
-let incoming_log_file = null;
-let logLevel = 0;
+var ipaddr = null;
+var port = 8000;
+var quality_log_file = null;
+var incoming_log_file = null;
+var logLevel = 0;
 
-/* Boolean controlling the sending of segments fragment-by-fragment as HTTP chunks, 
+/* Boolean controlling the sending of segments fragment-by-fragment as HTTP chunks,
    requires MP4Box or DashCast to use -segment-marker eods */
-let sendMediaSegmentsFragmented = false;
-let SEGMENT_MARKER = "eods";
-let no_marker_write = false;
-let sendInitSegmentsFragmented = false;
-let allowCors = false;
+var sendMediaSegmentsFragmented = false;
+var SEGMENT_MARKER = "eods";
+var no_marker_write = false;
+var sendInitSegmentsFragmented = false;
+var allowCors = false;
 
-let use_watchFile = true;
-const watchOptions = {persistent: true, recursive: false};
-const watchFileOptions = {persistent: true, interval: 10};
+var use_watchFile = true;
+var watchOptions = {persistent: true, recursive: false};
+var watchFileOptions = {persistent: true, interval: 10};
 
-const logLevels = {
+var logLevels = {
     INFO: 0,
     DEBUG_BASIC: 1,
     DEBUG_MAX: 2
 };
 
-const mime_types = {
+var mime_types = {
     mp4: "video/mp4",
     m4s: "application/octet-stream",
     mpd: "application/dash+xml",
@@ -67,25 +65,26 @@ function pad(n, width, z) {
 
 function reportMessage(level, msg) {
     if (level <= logLevel) {
-        const d = new Date();
+        var d = new Date();
         console.log("[" + pad(d.getHours(), 2) + ":" + pad(d.getMinutes(), 2) + ":" + pad(d.getSeconds(), 2) + "." + pad(d.getMilliseconds(), 3) + "] " + msg);
     }
 }
 
-/* returns the UTC time since the beginning of the year 
+/* returns the UTC time since the beginning of the year
  *  should be using Date.now() but does not seem to work in NodeJS
  */
 function getTime() {
-    const d = new Date;
+    var d = new Date;
 //	var n = (d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds())*1000 + d.getUTCMilliseconds();
-    return d.getTime();
+    var n = d.getTime();
+    return n;
 }
 
 function reportEvent(type, event, filename) {
-    let file_size = 0;
+    var file_size = 0;
     /* need to check if the file exists because of file deletion (MP4Box and DashCast time-shift feature) */
     if (fs.existsSync(filename)) {
-        const fd = fs.openSync(filename, 'r');
+        var fd = fs.openSync(filename, 'r');
         file_size = fs.fstatSync(fd).size;
         fs.closeSync(fd);
     }
@@ -93,12 +92,11 @@ function reportEvent(type, event, filename) {
 }
 
 function sendAndUpdateBuffer(response, message, fileData, endpos, noWrite) {
-    let tmpBuffer;
+    var tmpBuffer;
     fileData.total_sent += endpos;
     reportMessage(sendMediaSegmentsFragmented ? logLevels.INFO : logLevels.DEBUG_BASIC,
-        "sendMediaSegmentsFragmented: " + sendMediaSegmentsFragmented + " File " + fileData.filename + ", sending " + message + " data from " + fileData.next_byte_to_send + " to " + (endpos - 1) + " in " + (getTime() - response.startTime) + " ms (total_sent: " + fileData.total_sent + ") at utc " + getTime());
+        "File " + fileData.filename + ", sending " + message + " data from " + fileData.next_byte_to_send + " to " + (endpos - 1) + " in " + (getTime() - response.startTime) + " ms (total_sent: " + fileData.total_sent + ") at utc " + getTime());
     tmpBuffer = fileData.buffer.slice(fileData.next_byte_to_send, endpos);
-
     if (noWrite) {
         // patch for Google Chrome not supporting eods boxes
         // update buffer position but don't send the data
@@ -118,26 +116,26 @@ function sendAndUpdateBuffer(response, message, fileData, endpos, noWrite) {
     fileData.write_offset -= endpos;
     reportMessage(logLevels.DEBUG_MAX, "Updating next buffer write offset: " + fileData.write_offset + ' - next 8 bytes:');
 
-    if (logLevel === logLevels.DEBUG_MAX) console.log(fileData.buffer.slice(0, 8));
-    console.log("returning--------------------");
+    if (logLevel == logLevels.DEBUG_MAX) console.log(fileData.buffer.slice(0, 8));
+
     return fileData.buffer;
 }
 
 function readFileIntoBuffer(fileData) {
-    const offset = fileData.write_offset;
-    let buffer = fileData.buffer;
-    let j = fileData.next_file_position;
+    var offset = fileData.write_offset;
+    var buffer = fileData.buffer;
+    var j = fileData.next_file_position;
 
     if (offset >= buffer.length) {
         /* increase the buffer size if we don't have enough to read in */
-        buffer = Buffer.concat([buffer, Buffer.alloc(100000)], buffer.length + 100000);
+        buffer = Buffer.concat([buffer, new Buffer(100000)], buffer.length + 100000);
         fileData.buffer = buffer;
     }
 
     reportMessage(logLevels.DEBUG_MAX, "Trying to read " + (buffer.length - offset) + " bytes from file from position: " + j);
-    const bytesRead = fs.readSync(fileData.fd, buffer, offset, buffer.length - offset, j);
+    var bytesRead = fs.readSync(fileData.fd, buffer, offset, buffer.length - offset, j);
     reportMessage(logLevels.DEBUG_MAX, "bytesRead: " + bytesRead);
-    if (logLevel === logLevels.DEBUG_MAX) console.log(buffer.slice(0, 100));
+    if (logLevel == logLevels.DEBUG_MAX) console.log(buffer.slice(0, 100));
     j = j + bytesRead;
 
     reportMessage(logLevels.DEBUG_MAX, "next file read position: " + j);
@@ -148,7 +146,7 @@ function readFileIntoBuffer(fileData) {
 
 }
 
-const state = {
+var state = {
     NONE: "none",
     MOOV: "moov",
     MOOF: "moof",
@@ -156,27 +154,27 @@ const state = {
 };
 
 function readFromBufferAndSendBoxes(response, fileData) {
-    let box_start = fileData.next_box_start;
-    let buffer = fileData.buffer;
+    var box_start = fileData.next_box_start;
+    var buffer = fileData.buffer;
 
     reportMessage(logLevels.DEBUG_MAX, "Reading new box from buffer position: " + box_start + " - length: " + buffer.length);
-    if (logLevel === logLevels.DEBUG_MAX) console.log(buffer.slice(0, 8));
+    if (logLevel == logLevels.DEBUG_MAX) console.log(buffer.slice(0, 8));
 
     if (box_start + 8 > fileData.nb_valid_bytes) {
         reportMessage(logLevels.DEBUG_BASIC, "Not enough data in buffer to read box header: " + box_start + " - length: " + buffer.length + " - nb valid bytes: " + fileData.nb_valid_bytes);
         return "not-enough";
     }
 
-    const boxLength = buffer.readUInt32BE(box_start);
+    var boxLength = buffer.readUInt32BE(box_start);
 
-    const val1 = String.fromCharCode(buffer.readUInt8(box_start + 4));
-    const val2 = String.fromCharCode(buffer.readUInt8(box_start + 5));
-    const val3 = String.fromCharCode(buffer.readUInt8(box_start + 6));
-    const val4 = String.fromCharCode(buffer.readUInt8(box_start + 7));
+    var val1 = String.fromCharCode(buffer.readUInt8(box_start + 4));
+    var val2 = String.fromCharCode(buffer.readUInt8(box_start + 5));
+    var val3 = String.fromCharCode(buffer.readUInt8(box_start + 6));
+    var val4 = String.fromCharCode(buffer.readUInt8(box_start + 7));
 
     reportMessage(logLevels.DEBUG_BASIC, "Parsing box: code: " + val1 + val2 + val3 + val4 + " length: " + boxLength + " - parsing state: " + fileData.parsing_state);
 
-    if (boxLength === 0) {
+    if (boxLength == 0) {
         reportMessage(logLevels.DEBUG_BASIC, "Box length 0, stopping parsing");
         return "stop";
     }
@@ -196,10 +194,9 @@ function readFromBufferAndSendBoxes(response, fileData) {
     box_start += boxLength;
     fileData.next_box_start = box_start;
 
-    if (val1 + val2 + val3 + val4 === SEGMENT_MARKER) {
+    if (val1 + val2 + val3 + val4 == SEGMENT_MARKER) {
         reportMessage(logLevels.DEBUG_BASIC, "**************** End of segment ****************");
         buffer = sendAndUpdateBuffer(response, "eods", fileData, fileData.next_box_start, no_marker_write);
-        console.log("*********");
         fileData.endOfSegmentFound = true;
         fileData.nbMdatInSegment = 0;
         return "end";
@@ -207,12 +204,10 @@ function readFromBufferAndSendBoxes(response, fileData) {
 
     switch (fileData.parsing_state) {
         case "none":
-            console.log("moov");
-            if (val1 + val2 + val3 + val4 === "moov") {
-                console.log("moov if");
+            if (val1 + val2 + val3 + val4 == "moov") {
                 buffer = sendAndUpdateBuffer(response, "moov", fileData, fileData.next_box_start);
                 fileData.parsing_state = state.MOOV;
-            } else if (val1 + val2 + val3 + val4 === "moof") {
+            } else if (val1 + val2 + val3 + val4 == "moof") {
                 fileData.parsing_state = state.MOOF;
             } else {
                 /* wait for another box */
@@ -220,9 +215,7 @@ function readFromBufferAndSendBoxes(response, fileData) {
             break;
 
         case "moov":
-            console.log("moov");
-            if (val1 + val2 + val3 + val4 === "moof") {
-                console.log("moov if");
+            if (val1 + val2 + val3 + val4 == "moof") {
                 fileData.parsing_state = state.MOOF;
             } else {
                 /* wait for another box */
@@ -230,9 +223,7 @@ function readFromBufferAndSendBoxes(response, fileData) {
             break;
 
         case "moof":
-            console.log("mdat");
-            if (val1 + val2 + val3 + val4 === "mdat") {
-                console.log("mdat if");
+            if (val1 + val2 + val3 + val4 == "mdat") {
                 buffer = sendAndUpdateBuffer(response, "mdat", fileData, fileData.next_box_start);
                 reportMessage(logLevels.DEBUG_BASIC, "File " + fileData.filename + ", fragment " + fileData.nbMdatInSegment + " sent at utc " + getTime());
                 fileData.nbMdatInSegment++;
@@ -242,12 +233,11 @@ function readFromBufferAndSendBoxes(response, fileData) {
             }
             break;
     }
-    console.log("ok")
     return "ok";
 }
 
 function Parameters(multipleFiles, initial_state, response, filename) {
-    this.buffer = Buffer.alloc(100000);
+    this.buffer = new Buffer(100000);
     this.parsing_state = initial_state;
     this.nb_valid_bytes = 0;
     this.next_file_position = 0;
@@ -272,22 +262,13 @@ function sendFragmentedFile(response, filename, params) {
         return;
     }
 
-    let endReached = false;
-
     /* In some modes, we don't check for specific end of marker boxes */
     if (!params.checkEndOfSegment
-        || (params.checkEndOfSegment && params.endOfSegmentFound === false)
-        // Sending the last chunk in the current segment
-        || (!params.checkEndOfSegment && params.endOfSegmentFound === true && params.nbMdatInSegment > 0)) {
-
-        if (!params.checkEndOfSegment && params.endOfSegmentFound === true && params.nbMdatInSegment > 0) {
-            params.nbMdatInSegment = 0;
-            endReached = true;
-        }
+        || (params.checkEndOfSegment && params.endOfSegmentFound == false)) {
 
         params.fd = fs.openSync(filename, 'r');
-        const stats = fs.fstatSync(params.fd);
-        const file_size = stats.size;
+        var stats = fs.fstatSync(params.fd);
+        var file_size = stats.size;
         if (file_size <= params.next_file_position) {
             reportMessage(logLevels.DEBUG_MAX, "Error: file size hasn't changed or is smaller: " + file_size);
         }
@@ -305,27 +286,16 @@ function sendFragmentedFile(response, filename, params) {
                otherwise we need to wait for the next read */
             boxReadingStatus = readFromBufferAndSendBoxes(response, params);
 
-            if (endReached) {
-                reportMessage(logLevels.DEBUG_BASIC, "end reached");
-                if (use_watchFile) {
-                    fs.unwatchFile(filename, params.listener);
-                } else if (params.listener) {
-                    params.listener.close();
-                }
-                params.listener = null;
-                /* Quit */
-                break;
-            }
 
             if (params.next_file_position < file_size) {
                 /* we still have some data to read from the file */
+                continue;
             } else {
                 /* we have read everything available from the file (for now) */
-                if (boxReadingStatus === "ok") {
-                    console.log("we haven't finished reading boxes, keep on reading");
+                if (boxReadingStatus == "ok") {
                     /* we haven't finished reading boxes, keep on reading */
-                } else if (boxReadingStatus === "not-enough") {
-                    console.log("quit and wait for another file change event");
+                    continue;
+                } else if (boxReadingStatus == "not-enough") {
                     /* quit and wait for another file change event */
                     reportMessage(logLevels.DEBUG_BASIC, "Not enough data to read the full box");
                     if (params.listener == null) {
@@ -336,8 +306,7 @@ function sendFragmentedFile(response, filename, params) {
                         }
                     }
                     break;
-                } else if (boxReadingStatus === "stop") {
-                    console.log("reset the parser");
+                } else if (boxReadingStatus == "stop") {
                     /* reset the parser, the data written in the file by GPAC/MP4Box is not ready to be read yet
                        quit and wait for another file change event */
                     reportMessage(logLevels.DEBUG_BASIC, "Resetting parser - GPAC data not ready yet");
@@ -353,7 +322,7 @@ function sendFragmentedFile(response, filename, params) {
                         }
                     }
                     break;
-                } else if (boxReadingStatus === "end") {
+                } else if (boxReadingStatus == "end") {
                     reportMessage(logLevels.DEBUG_BASIC, "end reached");
                     if (use_watchFile) {
                         fs.unwatchFile(filename, params.listener);
@@ -370,10 +339,8 @@ function sendFragmentedFile(response, filename, params) {
         /* mark that the data from this file can be sent the next time its content will be refreshed
           (to send the very latest fragment first) */
         params.request = true;
-        //if (params.endOfSegmentFound && params.nbMdatInSegment === 0) {
-        if (endReached) {
-            console.log("sending 0-sized chunk");
-            const resTime = getTime() - response.startTime;
+        if (params.endOfSegmentFound) {
+            var resTime = getTime() - response.startTime;
             reportMessage(logLevels.INFO, "end of file reading (" + filename + ") in " + resTime + " ms at UTC " + getTime());
             params.response.end();
             params.endSent = true;
@@ -392,13 +359,13 @@ function sendFragmentedFile(response, filename, params) {
     }
 }
 
-/* Callback function used when an file event is generated, the file is sent in a fragmented manner 
+/* Callback function used when an file event is generated, the file is sent in a fragmented manner
  * The listener is not removed
  */
 function watchListener(event, filename) {
-    let boxReadingStatus;
+    var boxReadingStatus;
 
-    if (event === 'change') {
+    if (event == 'change') {
         reportEvent("file", event, filename);
         sendFragmentedFile(this.response, this.filename, this);
     } else {
@@ -407,25 +374,16 @@ function watchListener(event, filename) {
 }
 
 function watchFileListener(curr, prev) {
-    let boxReadingStatus;
+    var boxReadingStatus;
 
-    let newfilename;
-    if (curr.ino === 0) {
-        let filename_len = this.filename.length;
-        newfilename = this.filename.slice(0, filename_len - 4);
-        this.endOfSegmentFound = true;
-    } else {
-        newfilename = this.filename;
-    }
-
-    sendFragmentedFile(this.response, newfilename, this);
+    sendFragmentedFile(this.response, this.filename, this);
 }
 
 
 function sendFile(res, filename) {
-    const useChunk = false;
+    var useChunk = false;
     if (useChunk) {
-        const file_stream = fs.createReadStream(filename);
+        var file_stream = fs.createReadStream(filename);
         reportMessage(logLevels.DEBUG_BASIC, "Sending file (" + filename + ")");
         file_stream.on("error", function (exception) {
             console.error("Error reading file (" + filename + ")", exception);
@@ -440,16 +398,16 @@ function sendFile(res, filename) {
     } else {
         /* Send the whole file using .end() to avoid using .write() because it uses chunk encoding
            Use synchronous reading as they are small files (MPD and init) */
-        const buffer = fs.readFileSync(filename);
+        var buffer = fs.readFileSync(filename);
         res.setHeader('Content-Length', buffer.length);
         res.end(buffer);
     }
 }
 
-const onRequest = function (req, res) {
-    let useIndex = false;
-    let notFound = false;
-    let fStat;
+var onRequest = function (req, res) {
+    var useIndex = false;
+    var notFound = false;
+    var fStat;
 
     if (incoming_log_file && (req.url.slice(-3) === "mpd")) {
         fs.appendFile(incoming_log_file, (new Date()) + ": Incoming request from " + req.socket.remoteAddress + " for URL: " + req.url + " with headers: " + JSON.stringify(req.headers) + "\n");
@@ -457,23 +415,18 @@ const onRequest = function (req, res) {
     if (quality_log_file) {
         fs.writeFile(quality_log_file, req.url);
     }
-    const parsed_url = url_parser.parse(req.url, true);
-    let filename = parsed_url.pathname.slice(1);
-    const ext = parsed_url.pathname.slice(-3);
-    const time = res.startTime = getTime();
+    var parsed_url = url_parser.parse(req.url, true);
+    var filename = parsed_url.pathname.slice(1);
+    var time = res.startTime = getTime();
 
     if (allowCors) {
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Expose-Headers", "Date");
     }
 
-    if (ext === "m4s" && !filename.includes("init")) {
-        filename += ".tmp";
-    }
-
     // we send the files as they come, except for segments for which we send fragment by fragment
     if (filename === "") {
-        filename = segments_path;
+        filename = "./";
     }
     try {
         fStat = fs.statSync(filename);
@@ -482,7 +435,7 @@ const onRequest = function (req, res) {
     }
     if (notFound || !fStat.isFile()) {
         if (fStat && fStat.isDirectory()) {
-            let fIndexStat;
+            var fIndexStat;
             try {
                 fIndexStat = fs.statSync(filename + require('path').sep + 'index.html');
             } catch (e) {
@@ -503,13 +456,15 @@ const onRequest = function (req, res) {
 
     reportMessage(logLevels.INFO, "Request for file: '" + filename + "' at UTC " + time);
 
+    var ext = parsed_url.pathname.slice(-3);
+
     if (ext === "mpd" || ext === "mp4" || ext === "m4s") {
         res.statusCode = 200;
         res.setHeader("Content-Type", mime_types[ext]);
         res.setHeader("Server-UTC", time);
         // TODO: Check if we should send MP4 files as fragmented files or not
-        if (ext === "mp4" && sendInitSegmentsFragmented || ext === "m4s" && sendMediaSegmentsFragmented && !filename.includes("init")) {
-            const params = new Parameters(false, state.NONE, res, filename);
+        if (ext === "mp4" && sendInitSegmentsFragmented || ext === "m4s" && sendMediaSegmentsFragmented) {
+            var params = new Parameters(false, state.NONE, res, filename);
             sendFragmentedFile(res, filename, params);
             // Sending the final 0-size chunk because the file won't change anymore
             if (ext === "mp4") {
@@ -526,11 +481,11 @@ const onRequest = function (req, res) {
             sendFile(res, filename);
         }
     }
-};
+}
 
 process.argv.splice(1).forEach(function (val, index, array) {
     // console.log(index + ': ' + val + " / " + array[index + 1]);
-    if (index === 0) {
+    if (index == 0) {
         reportMessage(logLevels.INFO, "Runnning " + val + " using " + process.execPath + " version " + process.version + " in " + process.cwd());
     }
     if (val === "-ip") {

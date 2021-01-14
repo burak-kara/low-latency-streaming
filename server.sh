@@ -1,3 +1,2 @@
 node gpac-dash.js -chunk-media-segments -cors
-#node gpac-dash.js -chunk-media-segments -cors -log debug-max
-#node gpac-dash.js -h
+#node gpac-dash-original.js -chunk-media-segments -cors debug-max
