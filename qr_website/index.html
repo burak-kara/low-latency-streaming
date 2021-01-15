@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>QR</title>
+</head>
+<body>
+<div id="qrcode"></div>
+<div id="qr-text"></div>
+</body>
+<script src="qrcode.min.js"></script>
+<script>
+    let qrcode = new QRCode(document.getElementById("qrcode"));
+    setInterval(function () {
+        let seconds = new Date().getTime() / 1000;
+        qrcode.makeCode("" + seconds);
+        document.getElementById("qr-text").innerText = "" + seconds;
+    }, 100); // Wait 1000ms before running again
+
+</script>
+</html>
