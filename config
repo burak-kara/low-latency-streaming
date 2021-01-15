@@ -1,5 +1,5 @@
 segment_duration=4
-frag_dur=0.066
+frag_dur=4
 source_path="rtmp://192.168.1.38:1935/live/app"
 output_path="D:/projects/CS518/LowLatency/segments/manifest.mpd"
 segments_path="D:/projects/CS518/LowLatency/"
