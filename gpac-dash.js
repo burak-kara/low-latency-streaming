@@ -119,7 +119,7 @@ function sendAndUpdateBuffer(response, message, fileData, endpos, noWrite) {
     reportMessage(logLevels.DEBUG_MAX, "Updating next buffer write offset: " + fileData.write_offset + ' - next 8 bytes:');
 
     if (logLevel === logLevels.DEBUG_MAX) console.log(fileData.buffer.slice(0, 8));
-    console.log("returning--------------------");
+    // console.log("returning--------------------");
     return fileData.buffer;
 }
 
@@ -199,7 +199,7 @@ function readFromBufferAndSendBoxes(response, fileData) {
     if (val1 + val2 + val3 + val4 === SEGMENT_MARKER) {
         reportMessage(logLevels.DEBUG_BASIC, "**************** End of segment ****************");
         buffer = sendAndUpdateBuffer(response, "eods", fileData, fileData.next_box_start, no_marker_write);
-        console.log("*********");
+        // console.log("*********");
         fileData.endOfSegmentFound = true;
         fileData.nbMdatInSegment = 0;
         return "end";
@@ -207,9 +207,9 @@ function readFromBufferAndSendBoxes(response, fileData) {
 
     switch (fileData.parsing_state) {
         case "none":
-            console.log("moov");
+            // console.log("moov");
             if (val1 + val2 + val3 + val4 === "moov") {
-                console.log("moov if");
+                // console.log("moov if");
                 buffer = sendAndUpdateBuffer(response, "moov", fileData, fileData.next_box_start);
                 fileData.parsing_state = state.MOOV;
             } else if (val1 + val2 + val3 + val4 === "moof") {
@@ -220,9 +220,9 @@ function readFromBufferAndSendBoxes(response, fileData) {
             break;
 
         case "moov":
-            console.log("moov");
+            // console.log("moov");
             if (val1 + val2 + val3 + val4 === "moof") {
-                console.log("moov if");
+                // console.log("moov if");
                 fileData.parsing_state = state.MOOF;
             } else {
                 /* wait for another box */
@@ -230,9 +230,9 @@ function readFromBufferAndSendBoxes(response, fileData) {
             break;
 
         case "moof":
-            console.log("mdat");
+            // console.log("mdat");
             if (val1 + val2 + val3 + val4 === "mdat") {
-                console.log("mdat if");
+                // console.log("mdat if");
                 buffer = sendAndUpdateBuffer(response, "mdat", fileData, fileData.next_box_start);
                 reportMessage(logLevels.DEBUG_BASIC, "File " + fileData.filename + ", fragment " + fileData.nbMdatInSegment + " sent at utc " + getTime());
                 fileData.nbMdatInSegment++;
@@ -242,7 +242,7 @@ function readFromBufferAndSendBoxes(response, fileData) {
             }
             break;
     }
-    console.log("ok")
+    // console.log("ok")
     return "ok";
 }
 
@@ -322,10 +322,10 @@ function sendFragmentedFile(response, filename, params) {
             } else {
                 /* we have read everything available from the file (for now) */
                 if (boxReadingStatus === "ok") {
-                    console.log("we haven't finished reading boxes, keep on reading");
+                    // console.log("we haven't finished reading boxes, keep on reading");
                     /* we haven't finished reading boxes, keep on reading */
                 } else if (boxReadingStatus === "not-enough") {
-                    console.log("quit and wait for another file change event");
+                    // console.log("quit and wait for another file change event");
                     /* quit and wait for another file change event */
                     reportMessage(logLevels.DEBUG_BASIC, "Not enough data to read the full box");
                     if (params.listener == null) {
@@ -337,7 +337,7 @@ function sendFragmentedFile(response, filename, params) {
                     }
                     break;
                 } else if (boxReadingStatus === "stop") {
-                    console.log("reset the parser");
+                    // console.log("reset the parser");
                     /* reset the parser, the data written in the file by GPAC/MP4Box is not ready to be read yet
                        quit and wait for another file change event */
                     reportMessage(logLevels.DEBUG_BASIC, "Resetting parser - GPAC data not ready yet");
@@ -372,7 +372,7 @@ function sendFragmentedFile(response, filename, params) {
         params.request = true;
         //if (params.endOfSegmentFound && params.nbMdatInSegment === 0) {
         if (endReached) {
-            console.log("sending 0-sized chunk");
+            // console.log("sending 0-sized chunk");
             const resTime = getTime() - response.startTime;
             reportMessage(logLevels.INFO, "end of file reading (" + filename + ") in " + resTime + " ms at UTC " + getTime());
             params.response.end();
