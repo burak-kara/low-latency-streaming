@@ -1,8 +1,6 @@
 import cv2 as cv
 import numpy as np
 from PIL import ImageGrab
-import matplotlib.pyplot as plt
-import datetime
 import time
 
 
@@ -20,7 +18,6 @@ while True:
     img = ImageGrab.grab()
     img_np = np.array(img)
     img = cv.cvtColor(img_np, cv.COLOR_BGR2GRAY)
-    # cv.imshow('window', img)
 
     qrDecoder = cv.QRCodeDetector()
 
